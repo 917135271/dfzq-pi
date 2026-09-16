@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Initialization must use the same mounted settings as application startup.
+if [ -d /config/audit ]; then
+  export PIPELINE_CONFIG_DIR=/config/audit QUERY_CONFIG_DIR=/config/audit
+fi
+
 _redact() {
   printf '%s' "$1" | sed -E 's#([a-zA-Z][a-zA-Z0-9+.-]*://[^/@[:space:]]*):[^/@[:space:]]*@#\1:***@#g'
 }
