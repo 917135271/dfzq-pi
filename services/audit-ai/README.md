@@ -1,11 +1,11 @@
 # Audit AI service
 
-Python retrieval, document processing and shared database contracts embedded in the Pi repository. Imported from `dfzq-audit-ai` commit `38a2bd3cdd2484622b3a7529e3852e2d6c4e56fc`; the later feedback migration and optimization subsystem are excluded. `IMPORT-MANIFEST.json` records the original files and hashes; integration adaptations are described below.
+Python retrieval, document processing and shared database contracts embedded in the Pi repository. The base was imported from `dfzq-audit-ai` commit `38a2bd3cdd2484622b3a7529e3852e2d6c4e56fc`; supervision extraction, evidence verification, association and PDF-processing additions were overlaid from `917135271/dfzq-audit-ai` commit `d6cb9e21cc6460bbde86697942084685a930e4b3`. The later feedback migration and optimization subsystem are excluded. `IMPORT-MANIFEST.json` records both source revisions; integration adaptations are described below.
 
 ```text
 services/audit-ai/
   libs/common/       IR, database and retrieval contracts
-  pipeline/          document processing and indexing
+  pipeline/          document processing, indexing and supervision extraction
   query/             HTTP query API and policy MCP server
   eval/              pipeline verification utilities
   config/ seeds/     runtime configuration and dictionaries

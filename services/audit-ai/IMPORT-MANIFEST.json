@@ -1,6 +1,8 @@
 {
   "sourceRepository": "dfzq-audit-ai",
   "sourceCommit": "38a2bd3cdd2484622b3a7529e3852e2d6c4e56fc",
+  "supervisionOverlayRepository": "917135271/dfzq-audit-ai",
+  "supervisionOverlayCommit": "d6cb9e21cc6460bbde86697942084685a930e4b3",
   "excludedHeadCommit": "040251bf4b33eb43f74ba42fa87dfff9601f9dd9",
   "files": [
     {

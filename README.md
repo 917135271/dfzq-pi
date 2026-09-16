@@ -52,6 +52,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [AGENTS.m
 
 ```bash
 npm install --ignore-scripts  # Install all dependencies without running lifecycle scripts
+npm run hydrate:model-data    # Fetch generated provider model data; required before check/build
 npm run build         # Refresh model data, then build all packages
 npm run build:offline # Rebuild using existing model data without network access
 npm run check         # Lint, format, and type check
