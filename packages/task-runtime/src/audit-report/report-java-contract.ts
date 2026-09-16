@@ -8,6 +8,7 @@ import type {
 	ReportParagraph,
 	ReportTable,
 } from "./report-contracts.ts";
+import { taskDateEvidence } from "./report-task-evidence.ts";
 
 export type ReportDocumentNodeType =
 	| "title"
@@ -231,6 +232,12 @@ export function toAuditReportJavaDocument(dataset: AuditReportDataset, report: R
 
 	const evidenceById = new Map(dataset.evidence.map((item) => [item.evidenceId, item]));
 	if (evidenceById.size !== dataset.evidence.length) throw new Error("Duplicate evidence IDs in source snapshot");
+
+	// 报告日期是可变任务字段，不是模板落款。将它精确关联到同一项目／同一报告
+	// 的日期记录；落款机构仍是服务端报告配置，不伪造为业务数据来源。
+	const reportDateNode = nodes.find((node) => node.nodeId === "report-date");
+	if (!reportDateNode) throw new Error("Missing report-date node");
+	reportDateNode.citationIds = taskDateEvidence(dataset, "reportDate");
 	const sourceById = new Map(dataset.sources.map((item) => [item.sourceId, item]));
 	if (sourceById.size !== dataset.sources.length) throw new Error("Duplicate source IDs in source snapshot");
 	const citedEvidenceIds = [...new Set(nodes.flatMap((node) => node.citationIds))];
@@ -242,7 +249,7 @@ export function toAuditReportJavaDocument(dataset: AuditReportDataset, report: R
 	});
 	const citationById = new Map(citations.map((citation) => [citation.citationId, citation]));
 	for (const node of nodes) {
-		if (node.nodeType !== "paragraph" && node.nodeType !== "table") continue;
+		if (node.nodeType !== "paragraph" && node.nodeType !== "table" && node.nodeType !== "report-date") continue;
 		const groups = new Map<string, ReportNodeBasis["sourceGroups"][number]>();
 		for (const id of new Set(node.citationIds)) {
 			const citation = citationById.get(id);
