@@ -1,0 +1,15 @@
+ARG RUNTIME_BASE
+FROM ${RUNTIME_BASE}
+WORKDIR /app
+COPY services/audit-ai/ /app/services/audit-ai/
+ARG PIP_INDEX_URL
+ARG PIP_TRUSTED_HOST
+RUN python3.11 -m venv /opt/venv \
+ && /opt/venv/bin/pip install -c services/audit-ai/constraints.txt \
+    -e services/audit-ai/libs/common -e services/audit-ai/pipeline \
+    -e services/audit-ai/query -e services/audit-ai/eval -e 'services/audit-ai[dev]'
+ENV DFZQ_AUDIT_AI_ROOT=/app/services/audit-ai \
+    DFZQ_AUDIT_AI_PYTHON=/opt/venv/bin/python \
+    PATH=/opt/venv/bin:$PATH \
+    PYTHONDONTWRITEBYTECODE=1 HF_HUB_OFFLINE=1
+RUN python /app/services/audit-ai/service.py check

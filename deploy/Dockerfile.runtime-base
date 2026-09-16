@@ -1,0 +1,5 @@
+ARG NODE_BASE=node:22.19.0-bookworm-slim
+FROM ${NODE_BASE}
+RUN apt-get -o Acquire::Retries=3 update \
+ && apt-get install -y --no-install-recommends ca-certificates curl git python3.11-venv \
+ && rm -rf /var/lib/apt/lists/*

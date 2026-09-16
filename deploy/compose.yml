@@ -1,0 +1,113 @@
+services:
+  pg:
+    image: ${IMAGE_PREFIX-jfrog.orientsec.com.cn/dev7-docker-release-local/}postgres:16.14-bookworm
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      POSTGRES_USER: pipeline
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?PG_PASSWORD 未设置}
+      POSTGRES_DB: audit_pipeline
+    ports:
+      - "127.0.0.1:${PG_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipeline -d audit_pipeline"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  etcd:
+    image: ${IMAGE_PREFIX-jfrog.orientsec.com.cn/dev7-docker-release-local/}${ETCD_REPO:-coreos/etcd}:v3.5.30
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - etcd_data:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio:
+    image: ${IMAGE_PREFIX-jfrog.orientsec.com.cn/dev7-docker-release-local/}minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY required}
+    volumes:
+      - minio_data:/minio_data
+    command: minio server /minio_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus:
+    image: ${IMAGE_PREFIX-jfrog.orientsec.com.cn/dev7-docker-release-local/}milvusdb/milvus:v2.5.27
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY required}
+      MINIO_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY required}
+    volumes:
+      - milvus_data:/var/lib/milvus
+    ports:
+      - "127.0.0.1:${MILVUS_PORT:-19530}:19530"
+      - "127.0.0.1:${MILVUS_HEALTH_PORT:-9091}:9091"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 10s
+      start_period: 90s
+      timeout: 20s
+      retries: 12
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  pi:
+    image: ${PI_IMAGE:?PI_IMAGE 未设置}
+    restart: unless-stopped                 # D-9:容器**退出**时自动拉起
+    security_opt:
+      - seccomp:unconfined
+    depends_on:
+      pg:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
+    env_file:
+      - ${DFZQ_ENV_FILE:-./.env}
+    environment:
+      PIPELINE_MILVUS_HOST: milvus          # 🔴 不再是 127.0.0.1
+      PIPELINE_MILVUS_PORT: "19530"         # 容器网络内固定,不随宿主端口变
+      PG_HOST: pg
+      PG_PORT_INTERNAL: "5432"
+      TASK_RUNTIME_PORT: "18080"
+      TASK_RUNTIME_BIND_HOST: "0.0.0.0"
+    ports:
+      - "${TASK_RUNTIME_BIND:-127.0.0.1}:${TASK_RUNTIME_PORT:-18080}:18080"
+    volumes:
+      - ${DFZQ_CONFIG_DIR:-./config}:/config:ro
+      - runtime_data:/data                  # work root + MCP 审计日志 + 渲染出的 config
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:18080/healthz | grep -q '\"ok\"[[:space:]]*:[[:space:]]*true'"]
+      interval: 15s
+      start_period: 60s
+      timeout: 5s
+      retries: 4
+
+volumes:
+  pg_data:
+  etcd_data:
+  minio_data:
+  milvus_data:
+  runtime_data:
