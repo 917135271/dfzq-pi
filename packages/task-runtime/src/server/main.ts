@@ -6,6 +6,7 @@ import { parseReportInput } from "../audit-report/report-input.ts";
 import type { ReportNarrativeProcessor } from "../audit-report/report-narrative-processing.ts";
 import { createAuditReportRuntime } from "../audit-report/report-runtime.ts";
 import { createBoundAuditReportTools } from "../audit-report/report-tools.ts";
+import { standardDelivery } from "../audit-standards/tools.ts";
 import { AuthorizationError, type GrantVerifier } from "../auth/grant.ts";
 import type { GrantLease } from "../auth/lease.ts";
 import type { ProviderProfile } from "../env/provider-profile.ts";
@@ -28,6 +29,7 @@ import type { ToolLedger } from "../state/tool-ledger.ts";
 import { createPostgresRunStore } from "../store/postgres.ts";
 import { createSqliteRunStore } from "../store/sqlite.ts";
 import { createAuditReportToolset } from "../toolsets/audit-report.ts";
+import { createStandardToolset } from "../toolsets/audit-standards.ts";
 import { authorizedToolset } from "../toolsets/authorized.ts";
 import { createMcpToolset, type McpServerSpec } from "../toolsets/mcp/adapter.ts";
 import { ToolsetRegistry } from "../toolsets/registry.ts";
@@ -294,7 +296,9 @@ export async function createDefaultRuntimeFactory(options: DefaultFactoryOptions
 			const internal =
 				spec.toolset === "audit-report"
 					? ["begin_report_run", "resolve_report_document", "validate_report_document"].includes(name ?? "")
-					: spec.toolset === "audit-disclosure" && name === "validate_disclosure_result";
+					: spec.toolset === "audit-standards"
+						? name === "validate_standard_result"
+						: spec.toolset === "audit-disclosure" && name === "validate_disclosure_result";
 			if (name && !internal && grant && !grant.tools.includes(name)) throw new AuthorizationError("forbidden");
 		};
 
@@ -316,6 +320,8 @@ export async function createDefaultRuntimeFactory(options: DefaultFactoryOptions
 						checkNativeTool,
 					),
 				);
+			} else if (spec.toolset === "audit-standards") {
+				registry.register(spec.toolset, authorizedToolset(createStandardToolset(payload), checkNativeTool));
 			} else if (spec.toolset === "supervision-analysis") {
 				registry.register(
 					spec.toolset,
@@ -486,6 +492,7 @@ export async function createDefaultRuntimeFactory(options: DefaultFactoryOptions
 
 		const buildFull = (maxTurns = spec.limits.maxTurns) =>
 			createSessionRuntime({
+				...(spec.toolset === "audit-standards" ? standardDelivery : {}),
 				...(spec.toolset === "audit-disclosure" ? disclosureLinkDelivery : {}),
 				authorizeExecution: checkExecution,
 				interaction:

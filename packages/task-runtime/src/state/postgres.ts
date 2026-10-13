@@ -19,10 +19,12 @@ export function createPostgresStateStore(dsn: string): StateStore {
 		async compareAndSwap(key, revision, value) {
 			const json = canonicalJson(value);
 			if (json === undefined) throw new Error("state must be JSON serializable");
+			// postgres.js serializes JSONB parameters itself; passing canonical text double-encodes state.
+			const parameter = sql.json(JSON.parse(json) as postgres.JSONValue);
 			const rows =
 				revision === null
-					? await sql`INSERT INTO agent_state(state_key,revision,value_json) VALUES (${key},1,${json}::jsonb) ON CONFLICT(state_key) DO NOTHING RETURNING revision`
-					: await sql`UPDATE agent_state SET revision=revision+1,value_json=${json}::jsonb WHERE state_key=${key} AND revision=${revision} RETURNING revision`;
+					? await sql`INSERT INTO agent_state(state_key,revision,value_json) VALUES (${key},1,${parameter}) ON CONFLICT(state_key) DO NOTHING RETURNING revision`
+					: await sql`UPDATE agent_state SET revision=revision+1,value_json=${parameter} WHERE state_key=${key} AND revision=${revision} RETURNING revision`;
 			return rows.length === 1;
 		},
 		async close() {

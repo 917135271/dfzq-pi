@@ -1,0 +1,327 @@
+{
+  "type": "object",
+  "required": [
+    "taskId",
+    "mode",
+    "rows",
+    "citations",
+    "opinions",
+    "warnings"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "generate"
+        },
+        {
+          "type": "string",
+          "const": "revise"
+        }
+      ]
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "审计规范",
+          "大类",
+          "分项",
+          "审计事项(底稿名称)",
+          "审计步骤(稽核要点及程序)",
+          "审计目标",
+          "审计依据",
+          "审计事项序号"
+        ],
+        "properties": {
+          "审计规范": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "大类": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "分项": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "审计事项(底稿名称)": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "审计步骤(稽核要点及程序)": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "审计目标": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "审计依据": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "审计事项序号": {
+            "type": "string",
+            "maxLength": 30000
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 2000
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sequence",
+          "references"
+        ],
+        "properties": {
+          "sequence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "documentId",
+                "versionId",
+                "clause_id",
+                "quote"
+              ],
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "versionId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "clause_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 4
+                }
+              },
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 2000
+    },
+    "opinions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sequence",
+          "action",
+          "before",
+          "after",
+          "reason",
+          "references"
+        ],
+        "properties": {
+          "sequence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "add"
+              },
+              {
+                "type": "string",
+                "const": "update"
+              },
+              {
+                "type": "string",
+                "const": "delete"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "审计规范",
+                  "大类",
+                  "分项",
+                  "审计事项(底稿名称)",
+                  "审计步骤(稽核要点及程序)",
+                  "审计目标",
+                  "审计依据",
+                  "审计事项序号"
+                ],
+                "properties": {
+                  "审计规范": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "大类": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "分项": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计事项(底稿名称)": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计步骤(稽核要点及程序)": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计目标": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计依据": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计事项序号": {
+                    "type": "string",
+                    "maxLength": 30000
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "审计规范",
+                  "大类",
+                  "分项",
+                  "审计事项(底稿名称)",
+                  "审计步骤(稽核要点及程序)",
+                  "审计目标",
+                  "审计依据",
+                  "审计事项序号"
+                ],
+                "properties": {
+                  "审计规范": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "大类": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "分项": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计事项(底稿名称)": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计步骤(稽核要点及程序)": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计目标": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计依据": {
+                    "type": "string",
+                    "maxLength": 30000
+                  },
+                  "审计事项序号": {
+                    "type": "string",
+                    "maxLength": 30000
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "documentId",
+                "versionId",
+                "clause_id",
+                "quote"
+              ],
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "versionId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "clause_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 4
+                }
+              },
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 2000
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "maxItems": 100
+    }
+  },
+  "additionalProperties": false
+}

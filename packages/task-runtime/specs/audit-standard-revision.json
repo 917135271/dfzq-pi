@@ -1,0 +1,34 @@
+{
+  "id": "audit-standard-revision",
+  "description": "审计规范修订",
+  "durableSession": false,
+  "model": {
+    "role": "main"
+  },
+  "toolset": "audit-standards",
+  "tools": [
+    "read_standard_context",
+    "check_standard_draft"
+  ],
+  "systemPrompt": "audit-standards/system.md",
+  "thinkingLevel": "medium",
+  "limits": {
+    "maxTurns": 10,
+    "runTimeoutMs": 240000
+  },
+  "outputContract": {
+    "schema": "audit-standards/output-contract.schema.json",
+    "maxRepairAttempts": 2
+  },
+  "resultPolicy": {
+    "name": "result-budget",
+    "options": {
+      "maxChars": {
+        "default": 1500000
+      }
+    }
+  },
+  "observability": {
+    "contextSnapshot": "hash"
+  }
+}
