@@ -8,6 +8,7 @@ import {
 	type StandardOutput,
 	type StandardReference,
 	type StandardRow,
+	type StandardScope,
 } from "./contracts.ts";
 
 export function validateRows(rows: readonly StandardRow[]): void {
@@ -27,12 +28,47 @@ export function validateRows(rows: readonly StandardRow[]): void {
 export function parseStandardInput(value: unknown): StandardInput {
 	if (!Value.Check(inputSchema, value)) throw new Error("审计规范任务输入格式错误");
 	if (JSON.stringify(value).length > 1500000) throw new Error("规范任务资料过多，请缩小本次审计范围");
-	const source = structuredClone(value);
+	const requestedScopes: StandardScope[] =
+		value.scopes ??
+		(value.category?.trim()
+			? [{ category: value.category, subcategory: value.subcategory }]
+			: value.mode === "revise"
+				? [...new Set(value.rows.map((row) => row.大类))].map((category) => ({ category }))
+				: []);
+	if (!requestedScopes.length) throw new Error("生成规范需要选择固定大类");
+	const mapped = requestedScopes.some((scope) => scope.documentIds !== undefined);
+	if (mapped && requestedScopes.some((scope) => !scope.documentIds?.length))
+		throw new Error("按大类关联依据时，每个大类均须提供关联资料");
+	const scopes = new Map<string, StandardScope>();
+	const currentIds = new Set(value.sources.map((doc) => doc.documentId));
+	const associatedIds = new Set<string>();
+	for (const scope of requestedScopes) {
+		const category = scope.category.trim();
+		if (!category) throw new Error("大类不能为空");
+		if (
+			scope.documentIds &&
+			(new Set(scope.documentIds).size !== scope.documentIds.length ||
+				scope.documentIds.some((id) => !currentIds.has(id)))
+		)
+			throw new Error("大类关联资料不能重复，且须来自本次依据快照");
+		const entry = scopes.get(category) ?? { category, ...(mapped ? { documentIds: [] } : {}) };
+		for (const id of scope.documentIds ?? []) {
+			associatedIds.add(id);
+			if (!entry.documentIds!.includes(id)) entry.documentIds!.push(id);
+		}
+		scopes.set(category, entry);
+	}
+	if (mapped && [...currentIds].some((id) => !associatedIds.has(id)))
+		throw new Error("本次每份依据须明确关联至少一个大类");
+	const source: StandardInput = {
+		...structuredClone(value),
+		category: [...scopes.keys()][0],
+		subcategory: value.subcategory ?? "",
+		scopes: [...scopes.values()],
+	};
 	if (source.mode === "revise" || source.rows.length) validateRows(source.rows as StandardRow[]);
 	if (source.mode === "generate" && source.rows.length && !source.targetSequences.length)
 		throw new Error("生成任务只有局部重新生成时才接受原始事项");
-	if (source.mode === "generate" && (!source.category.trim() || !source.subcategory.trim()))
-		throw new Error("生成规范需要选择大类和分项");
 	const versions = new Set<string>();
 	for (const doc of source.sources) {
 		if (versions.has(doc.documentId)) throw new Error("每项关联依据只能选择一个当前版本");
@@ -63,6 +99,9 @@ export function validateStandardOutput(value: unknown, source: StandardInput): S
 	validateRows(result.rows as StandardRow[]);
 	const old = new Map(source.rows.map((row) => [row.审计事项序号, row]));
 	const next = new Map(result.rows.map((row) => [row.审计事项序号, row]));
+	const categories = new Set(source.scopes.map((scope) => scope.category));
+	const isCurrentSource = (ref: StandardReference) =>
+		source.sources.some((doc) => doc.documentId === ref.documentId && doc.versionId === ref.versionId);
 	const docs = [...source.sources, ...source.previousSources];
 	const checkReferences = (references: readonly StandardReference[], row?: StandardRow) => {
 		const seen = new Set<string>();
@@ -74,6 +113,9 @@ export function validateStandardOutput(value: unknown, source: StandardInput): S
 				throw new Error("引用必须来自关联依据的真实条款，且摘录须与原文一致");
 			seen.add(key);
 			if (row && doc && !row.审计依据.includes(doc.title)) throw new Error("成品审计依据必须包含所引用资料的名称");
+			const scope = row && source.scopes.find((item) => item.category === row.大类);
+			if (scope?.documentIds && isCurrentSource(ref) && !scope.documentIds.includes(ref.documentId))
+				throw new Error("审计事项只能引用其大类关联的本次依据");
 		}
 	};
 	const cited = new Set<string>();
@@ -95,8 +137,8 @@ export function validateStandardOutput(value: unknown, source: StandardInput): S
 			const seq = row.审计事项序号;
 			if (selected.size && !selected.has(seq)) {
 				if (!isDeepStrictEqual(old.get(seq), row)) throw new Error("重新生成不能更改未选择的审计事项");
-			} else if (!cited.has(seq) || row.大类 !== source.category || row.分项 !== source.subcategory)
-				throw new Error("生成事项必须符合所选大类、分项，并提供依据引用");
+			} else if (!cited.has(seq) || !categories.has(row.大类))
+				throw new Error("生成事项必须属于所选固定大类，并提供依据引用；分项按检查内容归纳");
 			else {
 				if (!row["审计步骤(稽核要点及程序)"].trim()) throw new Error("生成事项必须提供具体审计步骤");
 				const citation = result.citations.find((item) => item.sequence === seq);
@@ -129,6 +171,8 @@ export function validateStandardOutput(value: unknown, source: StandardInput): S
 			)
 				throw new Error("修订操作与前后内容不一致");
 			changed.add(opinion.sequence);
+			if (after && !categories.has(after.大类)) throw new Error("修订事项不能使用范围外的大类");
+			if (after && !after["审计步骤(稽核要点及程序)"].trim()) throw new Error("新增或调整事项必须保留有效审计步骤");
 			checkReferences(opinion.references, after as StandardRow | undefined);
 			if (
 				after &&

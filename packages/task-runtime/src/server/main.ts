@@ -6,6 +6,8 @@ import { parseReportInput } from "../audit-report/report-input.ts";
 import type { ReportNarrativeProcessor } from "../audit-report/report-narrative-processing.ts";
 import { createAuditReportRuntime } from "../audit-report/report-runtime.ts";
 import { createBoundAuditReportTools } from "../audit-report/report-tools.ts";
+import { createStandardRuntime } from "../audit-standards/standard-runtime.ts";
+import type { StandardContextReader } from "../audit-standards/tools.ts";
 import { standardDelivery } from "../audit-standards/tools.ts";
 import { AuthorizationError, type GrantVerifier } from "../auth/grant.ts";
 import type { GrantLease } from "../auth/lease.ts";
@@ -310,7 +312,10 @@ export async function createDefaultRuntimeFactory(options: DefaultFactoryOptions
 		// 无害);真正会炸的是**这个闭包自己**如果被改成复用同一个 registry 实例、却仍然在
 		// 每次调用里执行 `register(...)`——那样第二次调用会在一个已经登记过 `spec.toolset`
 		// 的实例上再登记一次,直接抛 `Toolset "policy-query" is already registered`。
-		const buildToolsets = (narrativeProcessor?: ReportNarrativeProcessor): ToolsetRegistry => {
+		const buildToolsets = (
+			narrativeProcessor?: ReportNarrativeProcessor,
+			standardContext?: StandardContextReader,
+		): ToolsetRegistry => {
 			const registry = new ToolsetRegistry();
 			if (spec.toolset === "audit-disclosure") {
 				registry.register(
@@ -321,7 +326,10 @@ export async function createDefaultRuntimeFactory(options: DefaultFactoryOptions
 					),
 				);
 			} else if (spec.toolset === "audit-standards") {
-				registry.register(spec.toolset, authorizedToolset(createStandardToolset(payload), checkNativeTool));
+				registry.register(
+					spec.toolset,
+					authorizedToolset(createStandardToolset(payload, standardContext, options.workRoot), checkNativeTool),
+				);
 			} else if (spec.toolset === "supervision-analysis") {
 				registry.register(
 					spec.toolset,
@@ -460,6 +468,29 @@ export async function createDefaultRuntimeFactory(options: DefaultFactoryOptions
 				permissionTags: filters.permTags ?? [],
 				artifacts,
 				batchSize: rawBatchSize,
+				skillPaths: skillPaths.get(specId),
+			});
+		}
+
+		if (spec.id === "audit-standard-generation" && spec.toolset === "audit-standards") {
+			const standardDir = resolve(options.specsDir, "audit-standards");
+			const batchSpec = JSON.parse(
+				await readFile(join(standardDir, "batch-extraction.runtime.json"), "utf8"),
+			) as RuntimeSpec;
+			await resolveSpecPromptPaths(batchSpec, standardDir);
+			return createStandardRuntime({
+				authorizeExecution: checkExecution,
+				signal,
+				assemblyTimeoutMs: options.assemblyTimeoutMs,
+				spec,
+				profile,
+				registry: plugins,
+				payload,
+				batchSpec,
+				buildToolsets: (readContext) => buildToolsets(undefined, readContext),
+				cwd: join(workdir, "workspace"),
+				agentDir: join(workdir, "agent"),
+				outputContractSchema: outputContractSchemas.get(specId),
 				skillPaths: skillPaths.get(specId),
 			});
 		}

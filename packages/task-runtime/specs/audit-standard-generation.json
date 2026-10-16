@@ -13,8 +13,8 @@
   "systemPrompt": "audit-standards/system.md",
   "thinkingLevel": "medium",
   "limits": {
-    "maxTurns": 10,
-    "runTimeoutMs": 240000
+    "maxTurns": 32,
+    "runTimeoutMs": 600000
   },
   "outputContract": {
     "schema": "audit-standards/output-contract.schema.json",

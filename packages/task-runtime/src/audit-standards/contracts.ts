@@ -22,6 +22,7 @@ export const sourceSchema = Type.Object(
 		versionId: Type.String({ minLength: 1 }),
 		title: Type.String({ minLength: 1 }),
 		kind: Type.Union([Type.Literal("external"), Type.Literal("internal")]),
+		versionNumber: Type.Optional(Type.String()),
 		clauses: Type.Array(
 			Type.Object(
 				{ clause_id: Type.String({ minLength: 1 }), text: Type.String({ minLength: 1 }) },
@@ -46,8 +47,21 @@ export const inputSchema = Type.Object(
 		taskId: Type.String({ minLength: 1 }),
 		mode: Type.Union([Type.Literal("generate"), Type.Literal("revise")]),
 		name: Type.String({ minLength: 1 }),
-		category: Type.String(),
-		subcategory: Type.String(),
+		category: Type.Optional(Type.String()),
+		subcategory: Type.Optional(Type.String()),
+		scopes: Type.Optional(
+			Type.Array(
+				Type.Object(
+					{
+						category: Type.String({ minLength: 1 }),
+						subcategory: Type.Optional(Type.String()),
+						documentIds: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1, maxItems: 100 })),
+					},
+					{ additionalProperties: false },
+				),
+				{ minItems: 1, maxItems: 100 },
+			),
+		),
 		note: Type.String(),
 		rows: Type.Array(standardRowSchema, { maxItems: 2000 }),
 		sources: Type.Array(sourceSchema, { minItems: 1, maxItems: 100 }),
@@ -56,7 +70,13 @@ export const inputSchema = Type.Object(
 	},
 	{ additionalProperties: false },
 );
-export type StandardInput = Static<typeof inputSchema>;
+export type StandardScope = NonNullable<Static<typeof inputSchema>["scopes"]>[number];
+// Normalized at the task boundary; existing callers can keep sending their current scope fields.
+export type StandardInput = Static<typeof inputSchema> & {
+	category: string;
+	subcategory: string;
+	scopes: StandardScope[];
+};
 export const outputSchema = Type.Object(
 	{
 		taskId: Type.String({ minLength: 1 }),

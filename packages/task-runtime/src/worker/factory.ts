@@ -17,6 +17,7 @@ export async function createWorkerFactory(
 		"HOME",
 		"LANG",
 		"LC_ALL",
+		"AUDIT_STANDARD_STYLE_REFERENCE_PATH",
 		"TMPDIR",
 		profile.apiKeyEnv,
 		"AUDIT_AI_BASE_URL",

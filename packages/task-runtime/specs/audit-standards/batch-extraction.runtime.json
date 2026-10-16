@@ -1,0 +1,11 @@
+{
+  "id": "audit-standard-batch-extraction",
+  "durableSession": false,
+  "model": { "role": "main" },
+  "toolset": "audit-standard-batch",
+  "toolMode": "none",
+  "tools": [],
+  "systemPrompt": "batch-extraction.md",
+  "thinkingLevel": "medium",
+  "limits": { "maxTurns": 3, "runTimeoutMs": 90000 }
+}
